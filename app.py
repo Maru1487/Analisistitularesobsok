@@ -55,10 +55,16 @@ if csv1 and csv2:
     palabra_clave = st.text_input("Ingresá una palabra o expresión para filtrar títulos:", "")
 
     if palabra_clave:
-        resultado_filtrado = resultado_mostrar[resultado_mostrar['Título'].str.contains(palabra_clave, case=False, na=False)]
-    else:
-        resultado_filtrado = resultado_mostrar
+import re
 
+# Solo si el campo de texto NO está vacío
+if palabra_clave.strip():
+    # Usamos \b para buscar la palabra exacta
+    patron = r"\b" + re.escape(palabra_clave.strip()) + r"\b"
+    resultado_filtrado = resultado_mostrar[resultado_mostrar['Título'].str.contains(patron, case=False, na=False, regex=True)]
+else:
+    resultado_filtrado = resultado_mostrar
+    
     st.dataframe(resultado_filtrado.head(20), use_container_width=True)
 
 else:

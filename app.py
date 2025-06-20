@@ -53,3 +53,21 @@ if archivos and len(archivos) == 2:
 else:
     if archivos and len(archivos) != 2:
         st.error("Debés subir exactamente DOS archivos.")
+
+# ... [código anterior igual] ...
+
+    # Resultado ordenado
+    resultado = df_final[['title', 'pageviewstotal', 'fuente_principal', 'porcentaje_fuente_principal']]
+    resultado = resultado.sort_values(by='pageviewstotal', ascending=False).reset_index(drop=True)
+
+    # Cambiar encabezados para visualización
+    resultado_mostrar = resultado.rename(columns={
+        'title': 'Título',
+        'pageviewstotal': 'Total de pageviews',
+        'fuente_principal': 'Fuente principal',
+        'porcentaje_fuente_principal': 'Porcentaje de la fuente principal'
+    })
+
+    st.subheader("Tabla principal: notas ordenadas por lecturas totales")
+    st.dataframe(resultado_mostrar.head(20))
+

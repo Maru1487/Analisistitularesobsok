@@ -54,5 +54,16 @@ if csv1 and csv2:
     st.subheader("Tabla principal: notas ordenadas por lecturas totales")
     st.dataframe(resultado_mostrar.head(20), use_container_width=True)
 
+# FILTRO TEMÁTICO
+st.subheader("Filtrar títulos por palabra clave")
+palabra_clave = st.text_input("Ingresá una palabra o expresión para filtrar títulos:", "")
+
+if palabra_clave:
+    resultado_filtrado = resultado_mostrar[resultado_mostrar['Título'].str.contains(palabra_clave, case=False, na=False)]
+else:
+    resultado_filtrado = resultado_mostrar
+
+st.dataframe(resultado_filtrado.head(20), use_container_width=True)
+
 else:
     st.info("Esperando que subas ambos archivos CSV para mostrar los resultados.")

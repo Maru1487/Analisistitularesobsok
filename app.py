@@ -81,4 +81,3 @@ if csv1 and csv2:
 
 else:
     st.info("Esperando que subas ambos archivos CSV para mostrar los resultados.")
-

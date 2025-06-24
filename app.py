@@ -194,23 +194,26 @@ ax.set_title('Top 20 notas más leídas')
 plt.tight_layout()
 st.pyplot(fig)
 
-    # --------- FILTRO TEMÁTICO ROBUSTO (palabra exacta o expresión) ---------
-    st.subheader("Filtrar títulos por palabra clave (palabra exacta)")
-    palabra_clave = st.text_input("Ingresá una palabra o expresión exacta para filtrar títulos (distingue palabra aislada):", "")
-    if palabra_clave:
-        regex = r'\b{}\b'.format(re.escape(palabra_clave.strip()))
-        resultado_filtrado = resultado_mostrar[resultado_mostrar['Título'].str.contains(regex, case=False, na=False, regex=True)]
-    else:
-        resultado_filtrado = resultado_mostrar
-    st.dataframe(resultado_filtrado, use_container_width=True)
+# --------- FILTRO TEMÁTICO ROBUSTO (palabra exacta o expresión) ---------
+st.subheader("Filtrar títulos por palabra clave (palabra exacta)")
+palabra_clave = st.text_input(
+    "Ingresá una palabra o expresión exacta para filtrar títulos (distingue palabra aislada):", "")
 
-    # Botón de descarga SIEMPRE PARA TODOS LOS RESULTADOS
-    csv = resultado_mostrar.to_csv(index=False).encode('utf-8')
-    st.download_button(
-        label="Descargar todos los resultados como CSV",
-        data=csv,
-        file_name='reporte_completo.csv',
-        mime='text/csv'
-    )
+if palabra_clave:
+    regex = r'\b{}\b'.format(re.escape(palabra_clave.strip()))
+    resultado_filtrado = resultado_mostrar[resultado_mostrar['Título'].str.contains(regex, case=False, na=False, regex=True)]
+else:
+    resultado_filtrado = resultado_mostrar
+
+st.dataframe(resultado_filtrado, use_container_width=True)
+
+# Botón de descarga SIEMPRE PARA TODOS LOS RESULTADOS
+csv = resultado_mostrar.to_csv(index=False).encode('utf-8')
+st.download_button(
+    label="Descargar todos los resultados como CSV",
+    data=csv,
+    file_name='reporte_completo.csv',
+    mime='text/csv'
+)
 else:
     st.info("Esperando que subas ambos archivos CSV para mostrar los resultados.")

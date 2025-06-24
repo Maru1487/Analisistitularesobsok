@@ -207,13 +207,14 @@ if csv1 and csv2:
         resultado_filtrado = resultado_mostrar
     st.dataframe(resultado_filtrado.head(30), use_container_width=True)
 
-    # --------- BOTÓN DE DESCARGA ---------
-    st.download_button(
-        label="Descargar tabla completa como CSV",
-        data=resultado_mostrar.to_csv(index=False).encode('utf-8'),
-        file_name="analisis_titulares_completo.csv",
-        mime='text/csv'
-    )
+    # NO SOLO exportar resultado_mostrar.head(30)
+csv = resultado_mostrar.to_csv(index=False).encode('utf-8')
+st.download_button(
+    label="Descargar todos los resultados como CSV",
+    data=csv,
+    file_name='reporte_completo.csv',
+    mime='text/csv'
+)
 else:
     st.info("Esperando que subas ambos archivos CSV para mostrar los resultados.")
 

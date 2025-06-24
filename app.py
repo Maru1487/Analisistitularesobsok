@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import spacy
+import re
 
 # Intenta cargar el modelo; si falla lo instala
 try:
@@ -10,8 +11,6 @@ except OSError:
     import sys
     subprocess.run([sys.executable, "-m", "spacy", "download", "es_core_news_sm"])
     nlp = spacy.load("es_core_news_sm")
-
-import re
 
 # --------- LISTA DE ENTIDADES MANUALES URUGUAYAS ---------
 entidades_locales_uy = [
@@ -33,27 +32,17 @@ verbos_declarativos = [
     "apoyó", "apoyará", "criticó", "criticarán", "celebró", "celebrará"
 ]
 
-# --------- SPA CY ---------
-@st.cache_resource
-def cargar_spacy():
-    return spacy.load("es_core_news_sm")
-nlp = cargar_spacy()
-
 # --------- FUNCIONES DE ANÁLISIS ---------
 def extraer_entidades(titulo):
     doc = nlp(titulo)
-    # spaCy
     entidades_spacy = [ent.text for ent in doc.ents if ent.label_ in ("PER", "ORG", "LOC")]
-    # Manual: coincidir mayúsculas completas en palabras separadas
     entidades_locales_encontradas = []
     palabras = re.findall(r'\b[A-ZÁÉÍÓÚÑ]{2,}\b', titulo)
     for ent in entidades_locales_uy:
         if any(ent == p for p in palabras):
             entidades_locales_encontradas.append(ent)
-        # Coincidencia exacta para entidades multi-palabra
         elif ent.lower() in titulo.lower() and " " in ent:
             entidades_locales_encontradas.append(ent)
-    # Unir y eliminar duplicados
     return list(set(entidades_spacy + entidades_locales_encontradas))
 
 def detectar_tono(titulo):
@@ -88,14 +77,11 @@ def determinar_estilo(titulo, entidades):
     doc = nlp(titulo)
     tokens = [t.text.lower() for t in doc]
     lemmas = [t.lemma_.lower() for t in doc]
-    # Narrativo: sujeto + verbo + lugar (básico)
     verbos = [t for t in doc if t.pos_ == "VERB"]
     if verbos and entidades:
         return "narrativo"
-    # Declarativo: verbo declarativo + entidad institucional/persona
     if any(v in tokens or v in lemmas for v in verbos_declarativos) and entidades:
         return "declarativo"
-    # Informativo-descriptivo
     return "informativo-descriptivo"
 
 def numeros_texto():
@@ -104,10 +90,9 @@ def numeros_texto():
         "quince", "dieciséis", "diecisiete", "dieciocho", "diecinueve", "veinte", "treinta", "cuarenta", "cincuenta", "sesenta",
         "setenta", "ochenta", "noventa", "cien", "ciento", "doscientos", "mil", "millón", "billón"
     ])
+
 def analizar_numeros(titulo):
-    # Números digitados
     digitos = re.findall(r'\d+', titulo)
-    # Números en texto
     txt = set(titulo.lower().split())
     texto_n = numeros_texto()
     hay_txt = txt.intersection(texto_n)
@@ -194,27 +179,25 @@ if csv1 and csv2:
     })
 
     st.subheader("Tabla principal: todas las variables de análisis sintáctico")
-    st.dataframe(resultado_mostrar.head(30), use_container_width=True)
+    st.dataframe(resultado_mostrar, use_container_width=True)
 
     # --------- FILTRO TEMÁTICO ROBUSTO (palabra exacta o expresión) ---------
     st.subheader("Filtrar títulos por palabra clave (palabra exacta)")
     palabra_clave = st.text_input("Ingresá una palabra o expresión exacta para filtrar títulos (distingue palabra aislada):", "")
     if palabra_clave:
-        # Regex: palabra exacta aislada o frase
         regex = r'\b{}\b'.format(re.escape(palabra_clave.strip()))
         resultado_filtrado = resultado_mostrar[resultado_mostrar['Título'].str.contains(regex, case=False, na=False, regex=True)]
     else:
         resultado_filtrado = resultado_mostrar
-    st.dataframe(resultado_filtrado.head(30), use_container_width=True)
+    st.dataframe(resultado_filtrado, use_container_width=True)
 
-    # NO SOLO exportar resultado_mostrar.head(30)
-csv = resultado_mostrar.to_csv(index=False).encode('utf-8')
-st.download_button(
-    label="Descargar todos los resultados como CSV",
-    data=csv,
-    file_name='reporte_completo.csv',
-    mime='text/csv'
-)
+    # Botón de descarga SIEMPRE PARA TODOS LOS RESULTADOS
+    csv = resultado_mostrar.to_csv(index=False).encode('utf-8')
+    st.download_button(
+        label="Descargar todos los resultados como CSV",
+        data=csv,
+        file_name='reporte_completo.csv',
+        mime='text/csv'
+    )
 else:
     st.info("Esperando que subas ambos archivos CSV para mostrar los resultados.")
-

@@ -210,7 +210,22 @@ if csv1 and csv2:
         st.pyplot(fig1)
     else:
         st.warning("No hay suficientes datos para graficar lecturas por extensión.")
+
+    # --- ANALISIS DE LECTURAS SEGÚN EXTENSIÓN DEL TÍTULO EN DISCOVER ---
+    st.markdown("#### Lecturas promedio según extensión del título en Google Discover")
+    discover = resultado_mostrar[resultado_mostrar['Fuente principal'].str.lower() == "google discover"]
     
+    if not discover.empty:
+        promedios_discover = discover.groupby('Extensión')['Total de pageviews'].mean()
+        fig_disc, ax_disc = plt.subplots(figsize=(7,5))
+        ax_disc.plot(promedios_discover.index, promedios_discover.values, color='orange')
+        ax_disc.set_title('Lecturas promedio según longitud del título en Discover')
+        ax_disc.set_xlabel('Extensión del título (caracteres)')
+        ax_disc.set_ylabel('Lecturas promedio')
+        st.pyplot(fig_disc)
+    else:
+        st.info("No hay notas con Google Discover como fuente principal en el dataset cargado.")
+
     # 3. Lecturas promedio según fuente principal
     st.markdown("#### Lecturas promedio según fuente principal de tráfico")
     if not resultado_graficos.empty:

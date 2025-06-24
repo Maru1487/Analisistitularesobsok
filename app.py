@@ -191,61 +191,56 @@ if csv1 and csv2:
     # --- VISUALIZACIONES ---
     st.subheader("Visualizaciones automáticas")
 
-    # Filtrar títulos no periodísticos
-    # Quita filas donde el título sea 'Total', vacío, nulo o menor a 20 caracteres (ajustable)
-    resultado_filtrado_grafico = resultado[
-        (resultado['Título'].str.lower() != 'total') &
-        (resultado['Título'].notnull()) &
-        (resultado['Título'].str.len() > 20)  # Podés ajustar el valor según el dataset
+    # 1. Filtrar títulos realmente periodísticos (sin filas de resumen)
+    resultado_graficos = resultado_mostrar[
+        (resultado_mostrar['Título'].str.lower() != 'total') &
+        (resultado_mostrar['Título'].notnull()) &
+        (resultado_mostrar['Título'].str.len() > 20)  # Opcional, podés ajustar
     ]
-
-    # Graficar solo con títulos periodísticos reales
-    import matplotlib.pyplot as plt
-
-    # Promedio de lecturas según extensión del título
-    promedios = resultado_filtrado_grafico.groupby('Extensión')['Total de pageviews'].mean()
-    fig, ax = plt.subplots(figsize=(7,5))
-    ax.plot(promedios.index, promedios.values)
-    ax.set_title('Lecturas promedio según longitud del título (sin outliers)')
-    ax.set_xlabel('Extensión del título (caracteres)')
-    ax.set_ylabel('Lecturas promedio')
-    st.pyplot(fig)
     
-    # 1. Lecturas promedio según extensión
+    # 2. Lecturas promedio según extensión del título
     st.markdown("#### Lecturas promedio según extensión del título")
-    fig1, ax1 = plt.subplots()
-    resultado_mostrar.groupby('Extensión')['Total de pageviews'].mean().plot(ax=ax1)
-    ax1.set_xlabel('Extensión del título (caracteres)')
-    ax1.set_ylabel('Lecturas promedio')
-    ax1.set_title('Lecturas promedio según longitud del título')
-    st.pyplot(fig1)
-
-    # 2. Lecturas promedio según fuente principal
+    if not resultado_graficos.empty:
+        promedios_ext = resultado_graficos.groupby('Extensión')['Total de pageviews'].mean().reset_index()
+        fig1, ax1 = plt.subplots()
+        ax1.plot(promedios_ext['Extensión'], promedios_ext['Total de pageviews'])
+        ax1.set_xlabel('Extensión del título (caracteres)')
+        ax1.set_ylabel('Lecturas promedio')
+        ax1.set_title('Lecturas promedio según longitud del título')
+        st.pyplot(fig1)
+    else:
+        st.warning("No hay suficientes datos para graficar lecturas por extensión.")
+    
+    # 3. Lecturas promedio según fuente principal
     st.markdown("#### Lecturas promedio según fuente principal de tráfico")
-    fuentes = resultado_mostrar.groupby('Fuente principal')['Total de pageviews'].mean().reset_index()
-    fig2 = px.bar(fuentes, x='Fuente principal', y='Total de pageviews',
-                  title="Lecturas promedio por fuente principal")
-    st.plotly_chart(fig2, use_container_width=True)
-
-    # 3. Distribución de tonos
+    if not resultado_graficos.empty:
+        fuentes = resultado_graficos.groupby('Fuente principal')['Total de pageviews'].mean().reset_index()
+        fig2 = px.bar(fuentes, x='Fuente principal', y='Total de pageviews',
+                      title="Lecturas promedio por fuente principal")
+        st.plotly_chart(fig2, use_container_width=True)
+    
+    # 4. Distribución de tonos
     st.markdown("#### Distribución de tonos en los títulos")
-    tonos = resultado_mostrar['Tono'].value_counts().reset_index()
-    tonos.columns = ['Tono', 'Cantidad']
-    fig3 = px.pie(tonos, names='Tono', values='Cantidad', title="Distribución de tonos en títulos")
-    st.plotly_chart(fig3, use_container_width=True)
-
-    # 4. Proporción de títulos con/sin entidades
+    if not resultado_graficos.empty:
+        tonos = resultado_graficos['Tono'].value_counts().reset_index()
+        tonos.columns = ['Tono', 'Cantidad']
+        fig3 = px.pie(tonos, names='Tono', values='Cantidad', title="Distribución de tonos en títulos")
+        st.plotly_chart(fig3, use_container_width=True)
+    
+    # 5. Proporción de títulos con/sin entidades
     st.markdown("#### Proporción de títulos con y sin entidades")
-    entidades = resultado_mostrar['¿Tiene entidades?'].value_counts().reset_index()
-    entidades.columns = ['¿Tiene entidades?', 'Cantidad']
-    fig4 = px.pie(entidades, names='¿Tiene entidades?', values='Cantidad', title="Títulos con/sin entidades")
-    st.plotly_chart(fig4, use_container_width=True)
-
-    # 5. Lecturas promedio por tono
+    if not resultado_graficos.empty:
+        entidades = resultado_graficos['¿Tiene entidades?'].value_counts().reset_index()
+        entidades.columns = ['¿Tiene entidades?', 'Cantidad']
+        fig4 = px.pie(entidades, names='¿Tiene entidades?', values='Cantidad', title="Títulos con/sin entidades")
+        st.plotly_chart(fig4, use_container_width=True)
+    
+    # 6. Lecturas promedio por tono
     st.markdown("#### Lecturas promedio según tono de título")
-    tonos2 = resultado_mostrar.groupby('Tono')['Total de pageviews'].mean().reset_index()
-    fig5 = px.bar(tonos2, x='Tono', y='Total de pageviews', title="Lecturas promedio por tono de título")
-    st.plotly_chart(fig5, use_container_width=True)
+    if not resultado_graficos.empty:
+        tonos2 = resultado_graficos.groupby('Tono')['Total de pageviews'].mean().reset_index()
+        fig5 = px.bar(tonos2, x='Tono', y='Total de pageviews', title="Lecturas promedio por tono de título")
+        st.plotly_chart(fig5, use_container_width=True)
 
 else:
     st.info("Esperando que subas ambos archivos CSV para mostrar los resultados.")

@@ -191,6 +191,26 @@ if csv1 and csv2:
     # --- VISUALIZACIONES ---
     st.subheader("Visualizaciones automáticas")
 
+    # Filtrar títulos no periodísticos
+    # Quita filas donde el título sea 'Total', vacío, nulo o menor a 20 caracteres (ajustable)
+    resultado_filtrado_grafico = resultado[
+        (resultado['Título'].str.lower() != 'total') &
+        (resultado['Título'].notnull()) &
+        (resultado['Título'].str.len() > 20)  # Podés ajustar el valor según el dataset
+    ]
+
+    # Graficar solo con títulos periodísticos reales
+    import matplotlib.pyplot as plt
+
+    # Promedio de lecturas según extensión del título
+    promedios = resultado_filtrado_grafico.groupby('Extensión')['Total de pageviews'].mean()
+    fig, ax = plt.subplots(figsize=(7,5))
+    ax.plot(promedios.index, promedios.values)
+    ax.set_title('Lecturas promedio según longitud del título (sin outliers)')
+    ax.set_xlabel('Extensión del título (caracteres)')
+    ax.set_ylabel('Lecturas promedio')
+    st.pyplot(fig)
+    
     # 1. Lecturas promedio según extensión
     st.markdown("#### Lecturas promedio según extensión del título")
     fig1, ax1 = plt.subplots()

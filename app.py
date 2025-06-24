@@ -1,27 +1,20 @@
 import streamlit as st
 import pandas as pd
 import spacy
+import re
 import matplotlib.pyplot as plt
 import plotly.express as px
-import re
 
-# ---------- CONFIGURACIÓN DE LA APP ----------
-st.set_page_config(page_title="Análisis automatizado de titulares", layout="wide")
-st.title("Análisis automatizado de titulares de El Observador")
-st.write("Subí dos archivos CSV exportados de Marfeel: uno con el total de lecturas y otro con las fuentes de tráfico.")
-
-# ---------- LISTA DE ENTIDADES MANUALES URUGUAYAS ----------
+# --- ENTIDADES Y VERBOS ---
 entidades_locales_uy = [
-    "IRPF", "BPS", "DGI", "AFAP", "ANEP", "CODICEN", "UTE", "OSE", "ANTEL", "MIDES", 
-    "MGAP", "MEF", "MEC", "MI", "MSP", "MTOP", "MRREE", "INAU", "INISA", 
-    "FA", "PN", "PC", "CA", "TC", "SCJ", "IMM", "BHU", "BROU", "Banco República", 
-    "FONASA", "SNIC", "UTU", "Universidad de la República", "Udelar", "ANV", "ANCAP", 
-    "INE", "INUMET", "IMPO", "PIT-CNT", "SIIAS", "CNCS", "SMU", "ASSE", "SUINAU", 
-    "Sunca", "Conaprole", "COFE", "CUTCSA", "IASS", "MIEM", "MTSS", "FFAA", "FAU", 
+    "IRPF", "BPS", "DGI", "AFAP", "ANEP", "CODICEN", "UTE", "OSE", "ANTEL", "MIDES",
+    "MGAP", "MEF", "MEC", "MI", "MSP", "MTOP", "MRREE", "INAU", "INISA",
+    "FA", "PN", "PC", "CA", "TC", "SCJ", "IMM", "BHU", "BROU", "Banco República",
+    "FONASA", "SNIC", "UTU", "Universidad de la República", "Udelar", "ANV", "ANCAP",
+    "INE", "INUMET", "IMPO", "PIT-CNT", "SIIAS", "CNCS", "SMU", "ASSE", "SUINAU",
+    "Sunca", "Conaprole", "COFE", "CUTCSA", "IASS", "MIEM", "MTSS", "FFAA", "FAU",
     "ANP", "TCR", "INDDHH", "AUF", "COPSA", "TCA", "PJ", "PE", "TOCAF"
 ]
-
-# ---------- LISTA DE VERBOS DECLARATIVOS ----------
 verbos_declarativos = [
     "anunció", "anunciará", "confirmó", "confirmará", "decidió", "decidirá", 
     "rechazó", "rechazará", "defendió", "defenderá", "cuestionó", "cuestionará",
@@ -30,13 +23,13 @@ verbos_declarativos = [
     "apoyó", "apoyará", "criticó", "criticarán", "celebró", "celebrará"
 ]
 
-# ---------- CARGA DE SPACY ----------
+# --- CARGA DE MODELO SPACY ---
 @st.cache_resource
 def cargar_spacy():
     return spacy.load("es_core_news_sm")
 nlp = cargar_spacy()
 
-# ---------- FUNCIONES DE ANÁLISIS ----------
+# --- FUNCIONES ---
 def extraer_entidades(titulo):
     doc = nlp(titulo)
     entidades_spacy = [ent.text for ent in doc.ents if ent.label_ in ("PER", "ORG", "LOC")]
@@ -113,7 +106,11 @@ def tiene_numeros(titulo):
 def cantidad_numeros(titulo):
     return len(re.findall(r'\d+', titulo)) + len(set(titulo.lower().split()).intersection(numeros_texto()))
 
-# ---------- CARGA DE ARCHIVOS ----------
+# --- APP STREAMLIT ---
+st.set_page_config(page_title="Análisis automatizado de titulares", layout="wide")
+st.title("Análisis automatizado de titulares de El Observador")
+st.write("Subí dos archivos CSV exportados de Marfeel: uno con el total de lecturas y otro con las fuentes de tráfico.")
+
 csv1 = st.file_uploader("Archivo 1: Pageviews totales", type="csv", key="csv1")
 csv2 = st.file_uploader("Archivo 2: Pageviews por fuente de tráfico", type="csv", key="csv2")
 
@@ -144,20 +141,20 @@ if csv1 and csv2:
     resultado = df_final[['title', 'pageviewstotal', 'fuente_principal', 'porcentaje_fuente_principal']]
     resultado = resultado.sort_values(by='pageviewstotal', ascending=False).reset_index(drop=True)
 
-    # --- ANÁLISIS SINTÁCTICO ---
+    # --- ANÁLISIS SINTÁCTICO AVANZADO ---
     resultado['longitud_titulo'] = resultado['title'].apply(len)
     resultado['entidades'] = resultado['title'].apply(extraer_entidades)
-    resultado['tiene_entidades'] = resultado['entidades'].apply(lambda x: "sí" if len(x) > 0 else "no")
-    resultado['cantidad_entidades'] = resultado['entidades'].apply(len)
-    resultado['tono_titulo'] = resultado['title'].apply(detectar_tono)
-    resultado['tiene_cita'] = resultado['title'].apply(tiene_cita)
-    resultado['posicion_entidad'] = resultado.apply(lambda row: posicion_entidad(row['title'], row['entidades']), axis=1)
-    resultado['estilo_titulo'] = resultado.apply(lambda row: determinar_estilo(row['title'], row['entidades']), axis=1)
-    resultado['formato_numerico'] = resultado['title'].apply(analizar_numeros)
-    resultado['tiene_numeros'] = resultado['title'].apply(tiene_numeros)
-    resultado['cantidad_numeros'] = resultado['title'].apply(cantidad_numeros)
+    resultado['¿Tiene entidades?'] = resultado['entidades'].apply(lambda x: "sí" if len(x) > 0 else "no")
+    resultado['Cantidad de entidades'] = resultado['entidades'].apply(len)
+    resultado['Tono'] = resultado['title'].apply(detectar_tono)
+    resultado['¿Cita?'] = resultado['title'].apply(tiene_cita)
+    resultado['Posición entidad'] = resultado.apply(lambda row: posicion_entidad(row['title'], row['entidades']), axis=1)
+    resultado['Estilo'] = resultado.apply(lambda row: determinar_estilo(row['title'], row['entidades']), axis=1)
+    resultado['Formato numérico'] = resultado['title'].apply(analizar_numeros)
+    resultado['¿Tiene números?'] = resultado['title'].apply(tiene_numeros)
+    resultado['Cantidad de números'] = resultado['title'].apply(cantidad_numeros)
 
-    # ENCABEZADOS AMIGABLES
+    # --- RENOMBRAR ENCABEZADOS ---
     resultado_mostrar = resultado.rename(columns={
         'title': 'Título',
         'pageviewstotal': 'Total de pageviews',
@@ -165,21 +162,14 @@ if csv1 and csv2:
         'porcentaje_fuente_principal': 'Porcentaje de la fuente principal',
         'longitud_titulo': 'Extensión',
         'entidades': 'Entidades',
-        'tiene_entidades': '¿Tiene entidades?',
-        'cantidad_entidades': 'Cantidad de entidades',
-        'tono_titulo': 'Tono',
-        'tiene_cita': '¿Cita?',
-        'posicion_entidad': 'Posición entidad',
-        'estilo_titulo': 'Estilo',
-        'formato_numerico': 'Formato numérico',
-        'tiene_numeros': '¿Tiene números?',
-        'cantidad_numeros': 'Cantidad de números'
+        # Los demás campos ya están en español
     })
 
+    # --- TABLA PRINCIPAL ---
     st.subheader("Tabla principal: todas las variables de análisis sintáctico")
     st.dataframe(resultado_mostrar.head(30), use_container_width=True)
 
-    # --------- FILTRO TEMÁTICO ROBUSTO (palabra exacta o expresión) ---------
+    # --- FILTRO TEMÁTICO ROBUSTO ---
     st.subheader("Filtrar títulos por palabra clave (palabra exacta)")
     palabra_clave = st.text_input("Ingresá una palabra o expresión exacta para filtrar títulos (distingue palabra aislada):", "")
     if palabra_clave:
@@ -187,9 +177,9 @@ if csv1 and csv2:
         resultado_filtrado = resultado_mostrar[resultado_mostrar['Título'].str.contains(regex, case=False, na=False, regex=True)]
     else:
         resultado_filtrado = resultado_mostrar
-    st.dataframe(resultado_filtrado, use_container_width=True)
+    st.dataframe(resultado_filtrado.head(30), use_container_width=True)
 
-    # --------- BOTÓN DE DESCARGA ---------
+    # --- DESCARGA DE RESULTADOS COMPLETOS ---
     csv = resultado_mostrar.to_csv(index=False).encode('utf-8')
     st.download_button(
         label="Descargar todos los resultados como CSV",
@@ -198,32 +188,44 @@ if csv1 and csv2:
         mime='text/csv'
     )
 
-    # --------- VISUALIZACIONES ----------
-    st.subheader("Visualizaciones rápidas")
+    # --- VISUALIZACIONES ---
+    st.subheader("Visualizaciones automáticas")
 
-    # Top 10 títulos más leídos (barra horizontal)
-    fig1 = px.bar(resultado_mostrar.head(10), 
-                  x="Total de pageviews", y="Título", orientation='h',
-                  title="Top 10 títulos más leídos")
-    st.plotly_chart(fig1, use_container_width=True)
+    # 1. Lecturas promedio según extensión
+    st.markdown("#### Lecturas promedio según extensión del título")
+    fig1, ax1 = plt.subplots()
+    resultado_mostrar.groupby('Extensión')['Total de pageviews'].mean().plot(ax=ax1)
+    ax1.set_xlabel('Extensión del título (caracteres)')
+    ax1.set_ylabel('Lecturas promedio')
+    ax1.set_title('Lecturas promedio según longitud del título')
+    st.pyplot(fig1)
 
-    # Distribución de extensión de títulos (histograma)
-    fig2, ax2 = plt.subplots()
-    ax2.hist(resultado_mostrar["Extensión"], bins=20, color="skyblue")
-    ax2.set_title("Distribución de extensión de los títulos")
-    ax2.set_xlabel("Cantidad de caracteres")
-    ax2.set_ylabel("Cantidad de títulos")
-    st.pyplot(fig2)
+    # 2. Lecturas promedio según fuente principal
+    st.markdown("#### Lecturas promedio según fuente principal de tráfico")
+    fuentes = resultado_mostrar.groupby('Fuente principal')['Total de pageviews'].mean().reset_index()
+    fig2 = px.bar(fuentes, x='Fuente principal', y='Total de pageviews',
+                  title="Lecturas promedio por fuente principal")
+    st.plotly_chart(fig2, use_container_width=True)
 
-    # Proporción de tonos de título
-    tonos = resultado_mostrar["Tono"].value_counts().reset_index()
-    fig3 = px.pie(tonos, names='index', values='Tono', title="Distribución de tonos en títulos")
+    # 3. Distribución de tonos
+    st.markdown("#### Distribución de tonos en los títulos")
+    tonos = resultado_mostrar['Tono'].value_counts().reset_index()
+    tonos.columns = ['Tono', 'Cantidad']
+    fig3 = px.pie(tonos, names='Tono', values='Cantidad', title="Distribución de tonos en títulos")
     st.plotly_chart(fig3, use_container_width=True)
 
-    # Proporción de estilos de título
-    estilos = resultado_mostrar["Estilo"].value_counts().reset_index()
-    fig4 = px.pie(estilos, names='index', values='Estilo', title="Distribución de estilos de título")
+    # 4. Proporción de títulos con/sin entidades
+    st.markdown("#### Proporción de títulos con y sin entidades")
+    entidades = resultado_mostrar['¿Tiene entidades?'].value_counts().reset_index()
+    entidades.columns = ['¿Tiene entidades?', 'Cantidad']
+    fig4 = px.pie(entidades, names='¿Tiene entidades?', values='Cantidad', title="Títulos con/sin entidades")
     st.plotly_chart(fig4, use_container_width=True)
+
+    # 5. Lecturas promedio por tono
+    st.markdown("#### Lecturas promedio según tono de título")
+    tonos2 = resultado_mostrar.groupby('Tono')['Total de pageviews'].mean().reset_index()
+    fig5 = px.bar(tonos2, x='Tono', y='Total de pageviews', title="Lecturas promedio por tono de título")
+    st.plotly_chart(fig5, use_container_width=True)
 
 else:
     st.info("Esperando que subas ambos archivos CSV para mostrar los resultados.")

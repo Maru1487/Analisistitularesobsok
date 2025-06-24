@@ -1,6 +1,16 @@
 import streamlit as st
 import pandas as pd
 import spacy
+
+# Intenta cargar el modelo; si falla lo instala
+try:
+    nlp = spacy.load("es_core_news_sm")
+except OSError:
+    import subprocess
+    import sys
+    subprocess.run([sys.executable, "-m", "spacy", "download", "es_core_news_sm"])
+    nlp = spacy.load("es_core_news_sm")
+
 import re
 
 # --------- LISTA DE ENTIDADES MANUALES URUGUAYAS ---------

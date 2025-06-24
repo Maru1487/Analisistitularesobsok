@@ -181,6 +181,19 @@ if csv1 and csv2:
     st.subheader("Tabla principal: todas las variables de análisis sintáctico")
     st.dataframe(resultado_mostrar, use_container_width=True)
 
+    import matplotlib.pyplot as plt
+
+st.subheader("Top 20 notas más leídas (gráfico de barras)")
+
+top20 = resultado_mostrar.head(20)
+fig, ax = plt.subplots(figsize=(10, 7))
+ax.barh(top20['Título'][::-1], top20['Total de pageviews'][::-1], color='#3683d4')
+ax.set_xlabel('Lecturas')
+ax.set_ylabel('Título')
+ax.set_title('Top 20 notas más leídas')
+plt.tight_layout()
+st.pyplot(fig)
+
     # --------- FILTRO TEMÁTICO ROBUSTO (palabra exacta o expresión) ---------
     st.subheader("Filtrar títulos por palabra clave (palabra exacta)")
     palabra_clave = st.text_input("Ingresá una palabra o expresión exacta para filtrar títulos (distingue palabra aislada):", "")

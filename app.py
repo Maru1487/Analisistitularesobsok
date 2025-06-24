@@ -1,18 +1,16 @@
 import streamlit as st
 import pandas as pd
 import spacy
+import matplotlib.pyplot as plt
+import plotly.express as px
 import re
 
-# Intenta cargar el modelo; si falla lo instala
-try:
-    nlp = spacy.load("es_core_news_sm")
-except OSError:
-    import subprocess
-    import sys
-    subprocess.run([sys.executable, "-m", "spacy", "download", "es_core_news_sm"])
-    nlp = spacy.load("es_core_news_sm")
+# ---------- CONFIGURACIÓN DE LA APP ----------
+st.set_page_config(page_title="Análisis automatizado de titulares", layout="wide")
+st.title("Análisis automatizado de titulares de El Observador")
+st.write("Subí dos archivos CSV exportados de Marfeel: uno con el total de lecturas y otro con las fuentes de tráfico.")
 
-# --------- LISTA DE ENTIDADES MANUALES URUGUAYAS ---------
+# ---------- LISTA DE ENTIDADES MANUALES URUGUAYAS ----------
 entidades_locales_uy = [
     "IRPF", "BPS", "DGI", "AFAP", "ANEP", "CODICEN", "UTE", "OSE", "ANTEL", "MIDES", 
     "MGAP", "MEF", "MEC", "MI", "MSP", "MTOP", "MRREE", "INAU", "INISA", 
@@ -23,7 +21,7 @@ entidades_locales_uy = [
     "ANP", "TCR", "INDDHH", "AUF", "COPSA", "TCA", "PJ", "PE", "TOCAF"
 ]
 
-# --------- LISTA DE VERBOS DECLARATIVOS ---------
+# ---------- LISTA DE VERBOS DECLARATIVOS ----------
 verbos_declarativos = [
     "anunció", "anunciará", "confirmó", "confirmará", "decidió", "decidirá", 
     "rechazó", "rechazará", "defendió", "defenderá", "cuestionó", "cuestionará",
@@ -32,7 +30,13 @@ verbos_declarativos = [
     "apoyó", "apoyará", "criticó", "criticarán", "celebró", "celebrará"
 ]
 
-# --------- FUNCIONES DE ANÁLISIS ---------
+# ---------- CARGA DE SPACY ----------
+@st.cache_resource
+def cargar_spacy():
+    return spacy.load("es_core_news_sm")
+nlp = cargar_spacy()
+
+# ---------- FUNCIONES DE ANÁLISIS ----------
 def extraer_entidades(titulo):
     doc = nlp(titulo)
     entidades_spacy = [ent.text for ent in doc.ents if ent.label_ in ("PER", "ORG", "LOC")]
@@ -90,7 +94,6 @@ def numeros_texto():
         "quince", "dieciséis", "diecisiete", "dieciocho", "diecinueve", "veinte", "treinta", "cuarenta", "cincuenta", "sesenta",
         "setenta", "ochenta", "noventa", "cien", "ciento", "doscientos", "mil", "millón", "billón"
     ])
-
 def analizar_numeros(titulo):
     digitos = re.findall(r'\d+', titulo)
     txt = set(titulo.lower().split())
@@ -110,12 +113,7 @@ def tiene_numeros(titulo):
 def cantidad_numeros(titulo):
     return len(re.findall(r'\d+', titulo)) + len(set(titulo.lower().split()).intersection(numeros_texto()))
 
-# --------- STREAMLIT APP ---------
-st.set_page_config(page_title="Análisis automatizado de titulares", layout="wide")
-st.title("Análisis automatizado de titulares de El Observador")
-
-st.write("Subí dos archivos CSV exportados de Marfeel: uno con el total de lecturas y otro con las fuentes de tráfico.")
-
+# ---------- CARGA DE ARCHIVOS ----------
 csv1 = st.file_uploader("Archivo 1: Pageviews totales", type="csv", key="csv1")
 csv2 = st.file_uploader("Archivo 2: Pageviews por fuente de tráfico", type="csv", key="csv2")
 
@@ -146,7 +144,7 @@ if csv1 and csv2:
     resultado = df_final[['title', 'pageviewstotal', 'fuente_principal', 'porcentaje_fuente_principal']]
     resultado = resultado.sort_values(by='pageviewstotal', ascending=False).reset_index(drop=True)
 
-    # --- ANALISIS SINTÁCTICO AVANZADO ---
+    # --- ANÁLISIS SINTÁCTICO ---
     resultado['longitud_titulo'] = resultado['title'].apply(len)
     resultado['entidades'] = resultado['title'].apply(extraer_entidades)
     resultado['tiene_entidades'] = resultado['entidades'].apply(lambda x: "sí" if len(x) > 0 else "no")
@@ -179,41 +177,54 @@ if csv1 and csv2:
     })
 
     st.subheader("Tabla principal: todas las variables de análisis sintáctico")
-    st.dataframe(resultado_mostrar, use_container_width=True)
+    st.dataframe(resultado_mostrar.head(30), use_container_width=True)
 
-    import matplotlib.pyplot as plt
+    # --------- FILTRO TEMÁTICO ROBUSTO (palabra exacta o expresión) ---------
+    st.subheader("Filtrar títulos por palabra clave (palabra exacta)")
+    palabra_clave = st.text_input("Ingresá una palabra o expresión exacta para filtrar títulos (distingue palabra aislada):", "")
+    if palabra_clave:
+        regex = r'\b{}\b'.format(re.escape(palabra_clave.strip()))
+        resultado_filtrado = resultado_mostrar[resultado_mostrar['Título'].str.contains(regex, case=False, na=False, regex=True)]
+    else:
+        resultado_filtrado = resultado_mostrar
+    st.dataframe(resultado_filtrado, use_container_width=True)
 
-st.subheader("Top 20 notas más leídas (gráfico de barras)")
+    # --------- BOTÓN DE DESCARGA ---------
+    csv = resultado_mostrar.to_csv(index=False).encode('utf-8')
+    st.download_button(
+        label="Descargar todos los resultados como CSV",
+        data=csv,
+        file_name='reporte_completo.csv',
+        mime='text/csv'
+    )
 
-top20 = resultado_mostrar.head(20)
-fig, ax = plt.subplots(figsize=(10, 7))
-ax.barh(top20['Título'][::-1], top20['Total de pageviews'][::-1], color='#3683d4')
-ax.set_xlabel('Lecturas')
-ax.set_ylabel('Título')
-ax.set_title('Top 20 notas más leídas')
-plt.tight_layout()
-st.pyplot(fig)
+    # --------- VISUALIZACIONES ----------
+    st.subheader("Visualizaciones rápidas")
 
-# --------- FILTRO TEMÁTICO ROBUSTO (palabra exacta o expresión) ---------
-st.subheader("Filtrar títulos por palabra clave (palabra exacta)")
-palabra_clave = st.text_input(
-    "Ingresá una palabra o expresión exacta para filtrar títulos (distingue palabra aislada):", "")
+    # Top 10 títulos más leídos (barra horizontal)
+    fig1 = px.bar(resultado_mostrar.head(10), 
+                  x="Total de pageviews", y="Título", orientation='h',
+                  title="Top 10 títulos más leídos")
+    st.plotly_chart(fig1, use_container_width=True)
 
-if palabra_clave:
-    regex = r'\b{}\b'.format(re.escape(palabra_clave.strip()))
-    resultado_filtrado = resultado_mostrar[resultado_mostrar['Título'].str.contains(regex, case=False, na=False, regex=True)]
-else:
-    resultado_filtrado = resultado_mostrar
+    # Distribución de extensión de títulos (histograma)
+    fig2, ax2 = plt.subplots()
+    ax2.hist(resultado_mostrar["Extensión"], bins=20, color="skyblue")
+    ax2.set_title("Distribución de extensión de los títulos")
+    ax2.set_xlabel("Cantidad de caracteres")
+    ax2.set_ylabel("Cantidad de títulos")
+    st.pyplot(fig2)
 
-st.dataframe(resultado_filtrado, use_container_width=True)
+    # Proporción de tonos de título
+    tonos = resultado_mostrar["Tono"].value_counts().reset_index()
+    fig3 = px.pie(tonos, names='index', values='Tono', title="Distribución de tonos en títulos")
+    st.plotly_chart(fig3, use_container_width=True)
 
-# Botón de descarga SIEMPRE PARA TODOS LOS RESULTADOS
-csv = resultado_mostrar.to_csv(index=False).encode('utf-8')
-st.download_button(
-    label="Descargar todos los resultados como CSV",
-    data=csv,
-    file_name='reporte_completo.csv',
-    mime='text/csv'
-)
+    # Proporción de estilos de título
+    estilos = resultado_mostrar["Estilo"].value_counts().reset_index()
+    fig4 = px.pie(estilos, names='index', values='Estilo', title="Distribución de estilos de título")
+    st.plotly_chart(fig4, use_container_width=True)
+
 else:
     st.info("Esperando que subas ambos archivos CSV para mostrar los resultados.")
+

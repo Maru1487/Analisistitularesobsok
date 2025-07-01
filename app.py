@@ -24,10 +24,8 @@ verbos_declarativos = [
 ]
 
 # --- CARGA DE MODELO SPACY ---
-@st.cache_resource
-def cargar_spacy():
-    return spacy.load("es_core_news_sm")
-nlp = cargar_spacy()
+import spacy
+nlp = spacy.load("es_core_news_sm")
 
 # --- FUNCIONES ---
 def extraer_entidades(titulo):

@@ -1,10 +1,9 @@
 import streamlit as st
 import pandas as pd
-import spacy
 import re
 import matplotlib.pyplot as plt
 import plotly.express as px
-
+import spacy
 nlp = spacy.load("es_core_news_sm")
 
 # --- ENTIDADES Y VERBOS ---

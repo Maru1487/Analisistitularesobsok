@@ -5,6 +5,8 @@ import re
 import matplotlib.pyplot as plt
 import plotly.express as px
 
+nlp = spacy.load("es_core_news_sm")
+
 # --- ENTIDADES Y VERBOS ---
 entidades_locales_uy = [
     "IRPF", "BPS", "DGI", "AFAP", "ANEP", "CODICEN", "UTE", "OSE", "ANTEL", "MIDES",
